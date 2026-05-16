@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Stockport Quests — Mini</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --panel: #181c2e;
+    --line: #262b44;
+    --ink: #e8ebff;
+    --mute: #8b91b8;
+    --brand: #818cf8;
+    --accent: #34d399;
+    --gold: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  header p { margin: 4px 0 16px; color: var(--mute); font-size: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; }
+  .stats div b { display: block; font-size: 20px; }
+  .stats div span { color: var(--mute); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  .bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin-top: 12px; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--brand), var(--accent)); }
+  .level-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--mute); margin-top: 6px; }
+  ul.quests { list-style: none; margin: 0; padding: 0; }
+  li.q { display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--line); }
+  li.q:last-child { border-bottom: none; }
+  button.tick { flex: 0 0 28px; height: 28px; border-radius: 8px;
+    border: 1.5px solid var(--line); background: transparent; color: var(--ink);
+    font-size: 16px; cursor: pointer; display: grid; place-items: center;
+    transition: background .15s, border-color .15s; }
+  button.tick:hover { border-color: var(--brand); }
+  li.q.done button.tick { background: var(--accent); border-color: var(--accent); color: #04241a; }
+  .q-body { flex: 1; min-width: 0; }
+  .q-title { font-weight: 600; }
+  li.q.done .q-title { text-decoration: line-through; color: var(--mute); }
+  .q-meta { color: var(--mute); font-size: 13px; margin-top: 2px; display: flex;
+    flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { font-size: 11px; padding: 2px 7px; border-radius: 999px;
+    background: var(--line); color: var(--ink); text-transform: uppercase; letter-spacing: .06em; }
+  .xp { color: var(--gold); font-weight: 600; }
+  .reset { display: block; margin: 24px auto 0; background: transparent;
+    color: var(--mute); border: 1px solid var(--line); padding: 8px 14px;
+    border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .reset:hover { color: var(--ink); border-color: var(--mute); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--brand); color: #0d0f1d; padding: 10px 16px; border-radius: 10px;
+    font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Stockport Quests <span style="color:var(--mute);font-weight:400;">— mini</span></h1>
+    <p>Tick off adventures around town. Earn XP. Level up.</p>
+  </header>
+
+  <section class="card">
+    <div class="stats">
+      <div><b id="stat-level">1</b><span>Level</span></div>
+      <div><b id="stat-xp">0</b><span>XP</span></div>
+      <div><b id="stat-done">0</b><span>Quests</span></div>
+    </div>
+    <div class="bar"><i id="bar" style="width:0%"></i></div>
+    <div class="level-line">
+      <span id="rank">Stockport Newcomer</span>
+      <span id="next">0 / 20 XP</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <ul class="quests" id="list"></ul>
+  </section>
+
+  <button class="reset" id="reset">Reset progress</button>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const QUESTS = [
+    { id: "vernon-park",   title: "Wander Vernon Park",          where: "Vernon Park",       cat: "Outdoors",  emoji: "🌳", diff: "easy"   },
+    { id: "viaduct",       title: "Spot the railway viaduct",    where: "Stockport Viaduct", cat: "History",   emoji: "🌉", diff: "easy"   },
+    { id: "market",        title: "Browse the Sunday Market",    where: "Market Place",      cat: "Culture",   emoji: "🛍️", diff: "easy"   },
+    { id: "air-raid",      title: "Tour the Air Raid Shelters",  where: "Chestergate",       cat: "History",   emoji: "🕯️", diff: "medium" },
+    { id: "pyramid",       title: "Find the blue Pyramid",       where: "Kings Reach",       cat: "Hidden",    emoji: "🔺", diff: "easy"   },
+    { id: "marble",        title: "Pint at Marble Brewery",      where: "Heaton Mersey",     cat: "Food",      emoji: "🍺", diff: "medium" },
+    { id: "edgeley-loop",  title: "Run the Edgeley loop",        where: "Edgeley",           cat: "Fitness",   emoji: "🏃", diff: "hard"   },
+    { id: "hat-works",     title: "Visit the Hat Works museum",  where: "Wellington Mill",   cat: "Culture",   emoji: "🎩", diff: "easy"   },
+    { id: "lyme-park",     title: "Hike up to Lyme Park",        where: "Disley",            cat: "Outdoors",  emoji: "🏞️", diff: "hard"   },
+    { id: "underbank",     title: "Wander Underbanks lanes",     where: "Old Town",          cat: "Hidden",    emoji: "🏚️", diff: "medium" },
+  ];
+  const XP = { easy: 10, medium: 25, hard: 50 };
+  const RANKS = [
+    "Stockport Newcomer", "Local Explorer", "Town Regular",
+    "Borough Veteran", "Quest Master", "Stockport Legend"
+  ];
+  const KEY = "stockport-mini-v1";
+
+  const state = load();
+
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (raw && Array.isArray(raw.done)) return { done: new Set(raw.done) };
+    } catch (_) {}
+    return { done: new Set() };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ done: [...state.done] })); } catch (_) {}
+  }
+
+  function totalXP() {
+    let t = 0;
+    for (const q of QUESTS) if (state.done.has(q.id)) t += XP[q.diff];
+    return t;
+  }
+  function levelFor(xp) { return Math.floor(Math.sqrt(xp / 20)) + 1; }
+  function xpForLevel(n) { return 20 * (n - 1) * (n - 1); }
+  function rankFor(level) { return RANKS[Math.min(level - 1, RANKS.length - 1)]; }
+
+  const list = document.getElementById("list");
+  const toast = document.getElementById("toast");
+  let toastTimer = null;
+  function flash(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 1600);
+  }
+
+  function render() {
+    list.innerHTML = "";
+    for (const q of QUESTS) {
+      const li = document.createElement("li");
+      li.className = "q" + (state.done.has(q.id) ? " done" : "");
+      li.innerHTML = `
+        <button class="tick" aria-label="${state.done.has(q.id) ? 'Uncomplete' : 'Complete'} ${q.title}">
+          ${state.done.has(q.id) ? "✓" : ""}
+        </button>
+        <div class="q-body">
+          <div class="q-title">${q.emoji} ${q.title}</div>
+          <div class="q-meta">
+            <span>${q.where}</span>
+            <span class="chip">${q.cat}</span>
+            <span class="xp">+${XP[q.diff]} XP</span>
+          </div>
+        </div>`;
+      li.querySelector("button").addEventListener("click", () => toggle(q));
+      list.appendChild(li);
+    }
+
+    const xp = totalXP();
+    const lvl = levelFor(xp);
+    const cur = xpForLevel(lvl), next = xpForLevel(lvl + 1);
+    const pct = next === cur ? 100 : Math.round(((xp - cur) / (next - cur)) * 100);
+
+    document.getElementById("stat-level").textContent = lvl;
+    document.getElementById("stat-xp").textContent = xp;
+    document.getElementById("stat-done").textContent = state.done.size;
+    document.getElementById("bar").style.width = pct + "%";
+    document.getElementById("rank").textContent = rankFor(lvl);
+    document.getElementById("next").textContent = `${xp} / ${next} XP`;
+  }
+
+  function toggle(q) {
+    const prevLevel = levelFor(totalXP());
+    if (state.done.has(q.id)) state.done.delete(q.id);
+    else { state.done.add(q.id); flash(`+${XP[q.diff]} XP — ${q.title}`); }
+    save();
+    render();
+    const newLevel = levelFor(totalXP());
+    if (newLevel > prevLevel) {
+      setTimeout(() => flash(`Level up! ${rankFor(newLevel)}`), 700);
+    }
+  }
+
+  document.getElementById("reset").addEventListener("click", () => {
+    if (!confirm("Reset all progress?")) return;
+    state.done.clear();
+    save();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
