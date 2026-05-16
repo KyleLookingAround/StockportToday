@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stockport Quests — Minimal</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --fg: #1a1a1a;
+    --muted: #6b6b6b;
+    --line: #e6e6e1;
+    --accent: #4f46e5;
+    --done: #10b981;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111;
+      --fg: #f0f0ec;
+      --muted: #8a8a85;
+      --line: #2a2a28;
+      --accent: #818cf8;
+      --done: #34d399;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  header { margin-bottom: 2rem; }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.02em;
+  }
+  .sub { color: var(--muted); font-size: 0.9rem; }
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .stat .n { font-size: 1.25rem; font-weight: 600; }
+  .stat .l { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .bar {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    margin-top: 0.75rem;
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+  }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 1.5rem 0 1rem;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg);
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .chip:hover { border-color: var(--fg); }
+  .chip.active {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+  ul.quests { list-style: none; padding: 0; margin: 0; }
+  li.quest {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  li.quest .em { font-size: 1.4rem; line-height: 1.2; width: 1.6rem; text-align: center; }
+  li.quest .body { flex: 1; min-width: 0; }
+  li.quest h3 {
+    margin: 0 0 0.2rem;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  li.quest p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  li.quest .meta {
+    margin-top: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  li.quest .meta span::before { content: "· "; color: var(--line); }
+  li.quest .meta span:first-child::before { content: ""; }
+  button.tick {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    transition: all 0.15s ease;
+  }
+  button.tick:hover { border-color: var(--fg); color: var(--fg); }
+  li.done button.tick {
+    background: var(--done);
+    border-color: var(--done);
+    color: #fff;
+  }
+  li.done h3 {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  button.reset {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+  }
+  button.reset:hover { color: var(--fg); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stockport Quests</h1>
+  <div class="sub">A minimalist tracker for things to do around town.</div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="n" id="stat-xp">0</div>
+      <div class="l">XP</div>
+    </div>
+    <div class="stat">
+      <div class="n" id="stat-level">1</div>
+      <div class="l" id="stat-level-name">Newcomer</div>
+    </div>
+    <div class="stat" style="flex:1">
+      <div class="n"><span id="stat-done">0</span> / <span id="stat-total">0</span></div>
+      <div class="l">Completed</div>
+      <div class="bar"><span id="bar"></span></div>
+    </div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+</header>
+
+<ul class="quests" id="list"></ul>
+
+<footer>
+  <span>Progress saved locally in your browser.</span>
+  <button class="reset" id="reset">Reset</button>
+</footer>
+
+<script>
+  const QUESTS = [
+    { id: 'outdoors-viaduct-viewpoint', em: '🌉', title: 'Walk the Stockport Viaduct Viewpoint', desc: 'Find the perfect spot to gaze up at the 27-arch Victorian railway viaduct.', cat: 'outdoors', diff: 'easy', xp: 10 },
+    { id: 'outdoors-vernon-park', em: '🌸', title: 'Vernon Park Circular Walk', desc: 'Stroll through Stockport’s oldest municipal park past the museum and ornamental gardens.', cat: 'outdoors', diff: 'easy', xp: 10 },
+    { id: 'outdoors-chadkirk', em: '⛪', title: 'Chadkirk Chapel Country Walk', desc: 'Follow the riverside trail to the ancient chapel and its restored walled garden.', cat: 'outdoors', diff: 'medium', xp: 25 },
+    { id: 'outdoors-goyt-valley', em: '⛰️', title: 'Goyt Valley Forest Trek', desc: 'Ancient woodland and open moorland with views over the reservoirs.', cat: 'outdoors', diff: 'hard', xp: 50 },
+    { id: 'food-stockport-pie', em: '🥧', title: 'Try a Proper Stockport Pie', desc: 'Sample a classic meat-and-potato pie from a local pie shop.', cat: 'food', diff: 'easy', xp: 10 },
+    { id: 'food-robinsons-brewery', em: '🍺', title: 'Robinsons Brewery Tour', desc: 'Tour the famous Unicorn Brewery, established 1838.', cat: 'food', diff: 'medium', xp: 25 },
+    { id: 'food-produce-hall', em: '🍴', title: 'Produce Hall Street Food', desc: 'Pick a dish from the rotating vendors in the restored market hall.', cat: 'food', diff: 'easy', xp: 10 },
+    { id: 'culture-plaza-cinema', em: '🎬', title: 'Catch a film at the Plaza', desc: 'Watch a screening in the gorgeously restored 1932 art deco super cinema.', cat: 'culture', diff: 'easy', xp: 10 },
+    { id: 'culture-hat-works', em: '🎩', title: 'Hat Works Museum', desc: 'Explore the UK’s only museum dedicated to the hatting industry.', cat: 'culture', diff: 'easy', xp: 10 },
+    { id: 'history-air-raid-shelters', em: '🕯️', title: 'Stockport Air Raid Shelters', desc: 'Descend into the WWII tunnels carved beneath the town centre.', cat: 'history', diff: 'easy', xp: 10 },
+    { id: 'history-bramall-hall', em: '🏰', title: 'Tour Bramall Hall', desc: 'Wander the rooms of the stunning Tudor manor house in its 70-acre park.', cat: 'history', diff: 'medium', xp: 25 },
+    { id: 'history-underbanks', em: '🏘️', title: 'Underbanks Heritage Walk', desc: 'Explore the historic Underbanks, Stockport’s oldest shopping street.', cat: 'history', diff: 'easy', xp: 10 },
+    { id: 'family-market-saturday', em: '🛍️', title: 'Saturday Market Browse', desc: 'Visit the open-air market on the Market Place, trading since the 13th century.', cat: 'family', diff: 'easy', xp: 10 },
+    { id: 'hidden-fred-perry-statue', em: '🎾', title: 'Find the Fred Perry Statue', desc: 'Track down the bronze statue of the tennis legend, a Stockport native.', cat: 'hidden', diff: 'easy', xp: 10 },
+    { id: 'hidden-great-stone', em: '🪨', title: 'The Great Stone of Stockport', desc: 'Find the ancient boulder said to have been hurled by the Devil.', cat: 'hidden', diff: 'easy', xp: 10 },
+    { id: 'fitness-vernon-park-parkrun', em: '🏃', title: 'Vernon Park parkrun', desc: 'Join the free Saturday 5k along the park’s paths.', cat: 'fitness', diff: 'medium', xp: 25 },
+    { id: 'fitness-goyt-trail-challenge', em: '🥾', title: 'Goyt Trail Challenge', desc: 'Take on the full Goyt Valley loop — a proper hike.', cat: 'fitness', diff: 'hard', xp: 50 },
+    { id: 'nightlife-petersgate-tap', em: '🍻', title: 'Pint at the Petersgate Tap', desc: 'Sample local craft from one of the town centre’s best taprooms.', cat: 'nightlife', diff: 'easy', xp: 10 },
+    { id: 'nightlife-armoury-micropub', em: '🍺', title: 'The Armoury Micropub', desc: 'A cosy stop in the heart of Stockport’s growing micropub scene.', cat: 'nightlife', diff: 'easy', xp: 10 },
+  ];
+
+  const CATEGORIES = [
+    { id: 'outdoors',  label: 'Outdoors',  em: '🌳' },
+    { id: 'food',      label: 'Food',      em: '🍴' },
+    { id: 'culture',   label: 'Culture',   em: '🎭' },
+    { id: 'history',   label: 'History',   em: '🏛️' },
+    { id: 'family',    label: 'Family',    em: '👨‍👩‍👧' },
+    { id: 'hidden',    label: 'Hidden',    em: '🔍' },
+    { id: 'fitness',   label: 'Fitness',   em: '🏃' },
+    { id: 'nightlife', label: 'Nightlife', em: '🌙' },
+  ];
+
+  const LEVEL_NAMES = [
+    'Newcomer', 'Explorer', 'Wanderer', 'Local',
+    'Adventurer', 'Stockport Pro', 'Stockport Legend',
+  ];
+
+  const STORAGE_KEY = 'stockport-minimal-v1';
+
+  let state = load() || { completed: {} };
+  let filter = 'all';
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch { return null; }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  function levelFromXp(xp) {
+    return Math.floor(Math.sqrt(xp / 20)) + 1;
+  }
+
+  function levelName(level) {
+    return LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)];
+  }
+
+  function toggle(id) {
+    if (state.completed[id]) delete state.completed[id];
+    else state.completed[id] = new Date().toISOString();
+    save();
+    render();
+  }
+
+  function setFilter(f) {
+    filter = f;
+    render();
+  }
+
+  function reset() {
+    if (!confirm('Reset all progress?')) return;
+    state = { completed: {} };
+    save();
+    render();
+  }
+
+  function diffLabel(d) {
+    return d === 'easy' ? 'Easy' : d === 'medium' ? 'Medium' : 'Hard';
+  }
+
+  function render() {
+    const totalXp = QUESTS.reduce((sum, q) => sum + (state.completed[q.id] ? q.xp : 0), 0);
+    const level = levelFromXp(totalXp);
+    const doneCount = QUESTS.filter(q => state.completed[q.id]).length;
+    const xpForCurrent = 20 * Math.pow(level - 1, 2);
+    const xpForNext = 20 * Math.pow(level, 2);
+    const pct = Math.min(100, Math.round(((totalXp - xpForCurrent) / (xpForNext - xpForCurrent)) * 100)) || 0;
+
+    document.getElementById('stat-xp').textContent = totalXp;
+    document.getElementById('stat-level').textContent = level;
+    document.getElementById('stat-level-name').textContent = levelName(level);
+    document.getElementById('stat-done').textContent = doneCount;
+    document.getElementById('stat-total').textContent = QUESTS.length;
+    document.getElementById('bar').style.width = pct + '%';
+
+    // Filters
+    const filters = document.getElementById('filters');
+    filters.innerHTML = '';
+    const all = makeChip('all', 'All', filter === 'all');
+    filters.appendChild(all);
+    CATEGORIES.forEach(c => {
+      if (!QUESTS.some(q => q.cat === c.id)) return;
+      filters.appendChild(makeChip(c.id, c.em + ' ' + c.label, filter === c.id));
+    });
+
+    // List
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    const visible = QUESTS.filter(q => filter === 'all' || q.cat === filter);
+    visible.forEach(q => {
+      const li = document.createElement('li');
+      li.className = 'quest' + (state.completed[q.id] ? ' done' : '');
+      const cat = CATEGORIES.find(c => c.id === q.cat);
+      li.innerHTML = `
+        <div class="em">${q.em}</div>
+        <div class="body">
+          <h3>${escapeHtml(q.title)}</h3>
+          <p>${escapeHtml(q.desc)}</p>
+          <div class="meta">
+            <span>${cat ? cat.label : q.cat}</span>
+            <span>${diffLabel(q.diff)}</span>
+            <span>${q.xp} XP</span>
+          </div>
+        </div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'tick';
+      btn.setAttribute('aria-label', state.completed[q.id] ? 'Mark incomplete' : 'Mark complete');
+      btn.textContent = state.completed[q.id] ? '✓' : '';
+      btn.addEventListener('click', () => toggle(q.id));
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function makeChip(id, label, active) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (active ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => setFilter(id));
+    return b;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  document.getElementById('reset').addEventListener('click', reset);
+  render();
+</script>
+</body>
+</html>
